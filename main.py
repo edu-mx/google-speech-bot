@@ -32,7 +32,22 @@ def TTS(text_voice='Hello: 1, 2, 3.', lang_voice='en'):
         log.critical('Não foi possível salvar o arquivo %s' % (x))
         return
 
+def send_audio(chat_id, filename, description):
+    try:
+    short_desc = f'{description[:30]}...'
+    with open(filename, 'rb') as audio:
+        bot.send_audio(chat_id, audio, caption=short_desc)
+    except Exception as x:
+        log.error('Unable to send audio %S. %S' %(filename, x))
+
 token_bot = get_token_bot()
 if token_bot:
     bot = telebot.TeleBot(token_bot)
 else: exit('The file does not have a token, please open token_bot.txt and check its integrity.')
+
+@bot.message_handler(commands=['start', 'help'])
+def commands_bot(msg):
+    if msg.text == '/start' or '/help':
+        name = msg.from_user.first_name
+        response = f'Hello {name}! Welcome to this bot. I can transform your texts into audio using the Google Text-to-Speech API (gTTS). To get started, just select your preferred language and begin typing your text. 🎉'
+        bot.send_message(msg.chat.id, response)
