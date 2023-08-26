@@ -100,30 +100,34 @@ else:
     log.error('Token bot not found in file')
     exit('The file does not have a token, please open token_bot.txt and check its integrity.')
 
-buttons_info = None
-@bot.message_handler(commands=['start', 'help'])
-def commands_bot(msg):
-    global buttons_info
-    name = msg.from_user.first_name
-    if msg.text == '/start':
-        response = f'Hello {name}!\nChoose your language to start using this bot;'
-    elif msg.text == '/help':
-        response = 'This bot converts text to speech. To start, just type a text and send, if your language is not defined, a request will be sent for you to choose yours.'
-    bot.send_message(msg.chat.id, response)
+button_id = None
+def keyboard_buttons(msg):
     markup = types.InlineKeyboardMarkup(row_width=2)
     for language in langs.keys():
         button = types.InlineKeyboardButton(language, callback_data=language)
         markup.add(button)
-    buttons = bot.send_message(msg.chat.id, 'Select your language:', reply_markup=markup)
-    buttons_info = buttons.message_id
+    buttons = bot.send_message(msg.chat.id, 'select your language:', reply_markup=markup)
+    return buttons.message_id
+
+@bot.message_handler(commands=['start', 'help'])
+def commands_bot(msg):
+    name = msg.from_user.first_name
+    global button_id
+    if msg.text == '/start':
+        response = f'Hello {name}!\nThis bot will convert your text messages into audio using the google API, for starters send any text.'
+    elif msg.text == '/help':
+        response = 'This bot converts text to speech. To start, just type a text and send, if your language is not defined, a request will be sent for you to choose yours.'
+    bot.send_message(msg.chat.id, response)
+    if get_user(msg.from_user.id) == None:
+        button_id = keyboard_buttons(msg)
 
 @bot.callback_query_handler(func=lambda call: call.data in langs.keys())
 def config_per_button(call):
     lang_code = call.data
     user_id = call.from_user.id
     user_name = call.from_user.first_name
-    if buttons_info: # if saved the id of the buttons
-        bot.delete_message(call.message.chat.id, buttons_info)
+    if button_id: # if saved the id of the buttons
+        bot.delete_message(call.message.chat.id, button_id)
         bot.send_message(call.message.chat.id, langs[lang_code])
     else:
         bot.send_message(call.message.chat.id, '⚠ Error, please clear the conversation history with me so that everything works normally.')
@@ -133,6 +137,7 @@ def config_per_button(call):
 
 @bot.message_handler(func=lambda msg: len(msg.text) >5)
 def generation(msg):
+    global button_id
     user_id = msg.from_user.id
     lang_user = get_user(user_id)
     if lang_user:
@@ -140,6 +145,9 @@ def generation(msg):
         if audio:
             send_audio(msg.chat.id, audio, msg.text)
             delete_audio(audio)
+    
+    else:
+        button_id = keyboard_buttons(msg)
 
 if __name__ == '__main__':
     try:
