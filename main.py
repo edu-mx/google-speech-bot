@@ -81,6 +81,23 @@ def save_user(name, user_id, lang):
     except Exception as x:
         log.error("Error saving user: %s" % x)
 
+def delete_user(user_id):
+    filename = "users.json"
+    try:
+        if os.path.exists(filename):
+            with open(filename, "r", encoding="utf-8") as file:
+                data = json.load(file)
+                if str(user_id) in data:
+                    del data[str(user_id)]
+                else:
+                    return 'There are no saved preferences, nothing to reset.'
+            with open(filename, "w", encoding="utf-8") as file:
+                json.dump(data, file, indent=4)
+            return 'I successfully reset your settings to default.'
+    except Exception as x:
+        log.error("Error deleting user: %s" % x)
+        return 'There are no saved preferences, nothing to reset.'
+
 def get_user(user_id):
     filename = "users.json"
     try:
@@ -109,14 +126,16 @@ def keyboard_buttons(msg):
     buttons = bot.send_message(msg.chat.id, 'select your language:', reply_markup=markup)
     return buttons.message_id
 
-@bot.message_handler(commands=['start', 'help'])
+@bot.message_handler(commands=['start', 'help', 'reset'])
 def commands_bot(msg):
     name = msg.from_user.first_name
     global button_id
     if msg.text == '/start':
         response = f'Hello {name}!\nThis bot will convert your text messages into audio using the google API, for starters send any text.'
     elif msg.text == '/help':
-        response = 'This bot converts text to speech. To start, just type a text and send, if your language is not defined, a request will be sent for you to choose yours.'
+        response = 'This bot converts text to speech, to start just send me anything.\nIf you want to reset your language preferences, type /reset.'
+    elif msg.text == '/reset':
+        response = delete_user(msg.from_user.id)
     bot.send_message(msg.chat.id, response)
     if get_user(msg.from_user.id) == None:
         button_id = keyboard_buttons(msg)
@@ -156,4 +175,4 @@ if __name__ == '__main__':
         print('Bot offline...')
     except Exception as x:
         log.critical('Exit code: '+str(x))
-        exit('O bot caiu, motivo: %s' %x)
+        exit('bot crashed, reason: %s' %x)
