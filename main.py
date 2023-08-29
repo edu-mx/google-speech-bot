@@ -8,18 +8,17 @@ from telebot import TeleBot, types
 from gtts import gTTS
 log.basicConfig(level=log.ERROR, filename='bot_log.log', filemode='w', format='%(asctime)s - %(levelname)s - %(message)s')
 
-# language codes
 langs = {
-    'pt-br': 'Olá! 🌟 Seu idioma foi definido como Português (Brasil). Tudo pronto para começar a escrever! 🎉 Digite /help para mais ajuda.',
-    'pt': 'Olá! 🌟 Seu idioma foi definido como Português. Tudo pronto para começar a escrever! 🎉 Digite /help para mais ajuda.',
-    'en': 'Hello! 🌟 Your language has been set to English. All set to start typing! 🎉 Type /help for more assistance.',
-    'es': '¡Hola! 🌟 Se ha establecido tu idioma como Español. ¡Listo para comenzar a escribir! 🎉 Escribe /help para obtener más ayuda.',
-    'tr': 'Merhaba! 🌟 Diliniz Türkçe olarak ayarlandı. Yazmaya başlamak için hazırsınız! 🎉 Daha fazla yardım için /help yazabilirsiniz.',
-    'fr': 'Bonjour ! 🌟 Votre langue a été définie comme le Français. Tout est prêt pour commencer à écrire ! 🎉 Tapez /help pour plus d\'assistance.',
-    'ru': 'Привет! 🌟 Ваш язык был установлен как Русский. Всё готово, чтобы начать писать! 🎉 Введите /help для получения дополнительной помощи.',
-    'de': 'Hallo! 🌟 Ihre Sprache wurde auf Deutsch festgelegt. Alles bereit, um mit dem Schreiben zu beginnen! 🎉 Geben Sie /help für weitere Unterstützung ein.',
-    'ja': 'こんにちは！ 🌟 言語が日本語に設定されました。書き始める準備が整いました！ 🎉 詳細なヘルプは /help と入力してください。',
-    'zh': '你好！ 🌟 您的语言已设置为中文。一切就绪，可以开始输入了！ 🎉 输入 /help 获取更多帮助。'
+    'pt-br': 'Olá! 🌟 Seu idioma foi definido com sucesso para Português (Brasil). Agora pode escrever à vontade. 😊',
+    'pt': 'Olá! 🌟 Seu idioma foi definido com sucesso para Português. Agora pode escrever à vontade. 😊',
+    'en': 'Hello! 🌟 Your language has been successfully set to English. You can start writing freely. 😊',
+    'es': '¡Hola! 🌟 Tu idioma se ha configurado con éxito como Español. Ahora puedes comenzar a escribir a tus anchas. 😊',
+    'tr': 'Merhaba! 🌟 Diliniz başarıyla Türkçe olarak ayarlandı. Artık özgürce yazmaya başlayabilirsiniz. 😊',
+    'fr': 'Bonjour ! 🌟 Votre langue a été configurée avec succès en français. Vous pouvez maintenant commencer à écrire librement. 😊',
+    'ru': 'Привет! 🌟 Ваш язык успешно установлен как русский. Теперь вы можете начать писать на свободу. 😊',
+    'de': 'Hallo! 🌟 Ihre Sprache wurde erfolgreich auf Deutsch festgelegt. Jetzt können Sie frei zu schreiben beginnen. 😊',
+    'ja': 'こんにちは！ 🌟 言語が日本語に正常に設定されました。これで自由に書き始めることができます。 😊',
+    'zh': '你好！ 🌟 您的语言已成功设置为中文。现在您可以自由地开始写作。 😊'
 }
 
 # the token is in token_bot.txt
@@ -42,8 +41,7 @@ def TTS(text_voice='1, 2, 3.', lang_voice='en'):
         tts_voice.save(audioTempFile)
         return audioTempFile
     except Exception as x:
-        log.critical('Não foi possível salvar o arquivo %s' % x)
-        return
+        log.critical('Could not save file %s' % x)
 
 def send_audio(chat_id, filename, description):
     try:
@@ -108,7 +106,6 @@ def get_user(user_id):
                     return data[str(user_id)]["lang"]
     except Exception as x:
         log.error('Error getting user: %s' % x)
-        return
 
 token_bot = get_token_bot()
 if token_bot:
@@ -117,23 +114,21 @@ else:
     log.error('Token bot not found in file')
     exit('The file does not have a token, please open token_bot.txt and check its integrity.')
 
-button_id = None
+button_id = None # save the id buttons
 def keyboard_buttons(msg):
     markup = types.InlineKeyboardMarkup(row_width=2)
     for language in langs.keys():
         button = types.InlineKeyboardButton(language, callback_data=language)
         markup.add(button)
-    buttons = bot.send_message(msg.chat.id, 'select your language:', reply_markup=markup)
+    buttons = bot.send_message(msg.chat.id, 'Choose your preferred language:', reply_markup=markup)
     return buttons.message_id
 
-@bot.message_handler(commands=['start', 'help', 'reset'])
+@bot.message_handler(commands=['start', 'reset'])
 def commands_bot(msg):
     name = msg.from_user.first_name
     global button_id
     if msg.text == '/start':
-        response = f'Hello {name}!\nThis bot will convert your text messages into audio using the google API, for starters send any text.'
-    elif msg.text == '/help':
-        response = 'This bot converts text to speech, to start just send me anything.\nIf you want to reset your language preferences, type /reset.'
+        response = f'Hello {name}, this bot converts text messages into audio. Just select your language and get started.\nTo reset your language, type /reset.'
     elif msg.text == '/reset':
         response = delete_user(msg.from_user.id)
     bot.send_message(msg.chat.id, response)
@@ -145,7 +140,7 @@ def config_per_button(call):
     lang_code = call.data
     user_id = call.from_user.id
     user_name = call.from_user.first_name
-    if button_id: # if saved the id of the buttons
+    if button_id:
         bot.delete_message(call.message.chat.id, button_id)
         bot.send_message(call.message.chat.id, langs[lang_code])
     else:
@@ -166,6 +161,7 @@ def generation(msg):
             delete_audio(audio)
     
     else:
+        # choose the language
         button_id = keyboard_buttons(msg)
 
 if __name__ == '__main__':
@@ -174,5 +170,6 @@ if __name__ == '__main__':
         bot.polling()
         print('Bot offline...')
     except Exception as x:
-        log.critical('Exit code: '+str(x))
+        log.critical('broken code: '+str(x))
         exit('bot crashed, reason: %s' %x)
+        
